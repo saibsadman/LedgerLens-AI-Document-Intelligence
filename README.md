@@ -16,6 +16,7 @@ It accepts PDF, JPG, PNG, TIFF, XLSX, XLS, and CSV. Digital PDF text is read dir
 - Keyword search, deterministic semantic ranking, PDF-to-PDF / PDF-to-spreadsheet comparison, corrections, reprocessing, and history APIs
 - Responsive React review dashboard
 - Unit/integration tests and a repeatable measured evaluation runner
+- A captioned screen-recorded walkthrough at `docs/ledgerlens_walkthrough.webm`
 
 ## Quick start (without Docker)
 
@@ -91,6 +92,8 @@ npm run build
 ```
 
 The benchmark writes actual measurements to `evaluation/results.json`. See [evaluation methodology](evaluation/README.md) and the [evaluation report](docs/EVALUATION_REPORT.md). A tiny synthetic benchmark is a smoke test, not a production accuracy claim.
+
+The ready-to-play screen recording is at [docs/ledgerlens_walkthrough.webm](docs/ledgerlens_walkthrough.webm). Reproduction instructions are in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
 
 ## Scale and reliability
 

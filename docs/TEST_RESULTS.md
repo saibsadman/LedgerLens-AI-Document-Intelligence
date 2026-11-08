@@ -4,13 +4,14 @@ Verified on 2026-11-08.
 
 | Check | Result |
 |---|---|
-| Backend automated tests | 14 passed, 0 failed |
+| Backend automated tests | 15 passed, 0 failed |
 | Backend statement coverage | 80% |
 | Python lint/import checks | Passed |
 | Evaluation runner | Passed; output written to `evaluation/results.json` |
 | Frontend TypeScript check | Passed |
 | Frontend Vite production build | Passed; 1,567 modules transformed |
 | Frontend dependency audit | 0 known vulnerabilities at install time |
+| Recorded walkthrough | 42.56 seconds, 1440×900 VP9 WebM, visually inspected |
 
 Commands used:
 

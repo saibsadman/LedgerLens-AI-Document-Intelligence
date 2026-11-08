@@ -1,4 +1,18 @@
-# Recorded walkthrough script
+# Recorded walkthrough
+
+The generated, captioned walkthrough is saved as `docs/ledgerlens_walkthrough.webm`. It is a 42.56-second, 1440×900 VP9 WebM recording of the real local application using isolated synthetic data.
+
+To reproduce it after building the frontend:
+
+```powershell
+python -m pip install -e ".[recording]"
+python -m playwright install ffmpeg
+python scripts/record_walkthrough.py
+```
+
+The recorder uses a temporary isolated database and generated sample invoices. It does not read or expose production documents, API keys, or existing application data.
+
+## Narration script
 
 Use this 4–6 minute script when recording the required walkthrough after local verification.
 

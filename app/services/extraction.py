@@ -72,6 +72,12 @@ def _line_items(text: str) -> list[LineItem]:
         r"^\s*(?P<description>[A-Za-z][\w /().,#&+-]{2,}?)\s{2,}|^\s*(?P<tabdesc>[^\t]+)\t"
     )
     for line in text.splitlines():
+        tabular_cells = [cell.strip() for cell in line.split("\t")]
+        if len(tabular_cells) >= 5 and any(
+            re.fullmatch(r"\d{4}-\d{2}-\d{2}", cell) for cell in tabular_cells
+        ):
+            # This is an invoice summary row, not a product/service line item.
+            continue
         match = row_pattern.search(line)
         if not match:
             continue

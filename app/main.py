@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import models  # noqa: F401
 from app.api.routes import router
@@ -51,3 +53,9 @@ async def unhandled_exception(_: Request, exc: Exception) -> JSONResponse:
 
 
 app.include_router(router, prefix="/api/v1")
+
+# Serve the compiled review workspace from the same origin when a frontend build exists.
+# API-only and test environments continue to work when the directory is absent.
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")

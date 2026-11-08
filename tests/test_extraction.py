@@ -30,3 +30,16 @@ def test_missing_values_remain_null():
     assert result.invoice_date is None
     assert result.total is None
     assert result.currency is None
+
+
+def test_invoice_summary_table_is_not_misclassified_as_line_item():
+    text = """Invoice No: REVIEW-2026-077
+Invoice Date: 2026-11-08
+Supplier: Harbor Consulting
+Subtotal: 1000.00
+Tax: 150.00
+Grand Total: 1200.00
+REVIEW-2026-077\t2026-11-08\tHarbor Consulting\tUSD\t1000.00\t150.00\t1200.00
+"""
+    result = extract_deterministic(text)
+    assert result.line_items == []
