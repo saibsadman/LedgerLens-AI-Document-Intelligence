@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -13,6 +15,8 @@ from app.services.document_processor import process_file
 from app.services.extraction import extract_invoice
 from app.services.search import embed_text
 from app.services.validation import validate_invoice
+
+extraction_trace_logger = logging.getLogger("uvicorn.error.extraction_trace")
 
 
 def _event(
@@ -37,6 +41,26 @@ def _event(
 
 def _normalize_supplier(value: str) -> str:
     return " ".join(value.lower().split())
+
+
+def _log_pre_validation_payload(
+    document_id: str, raw_text: str, invoice: InvoiceExtraction
+) -> None:
+    """Trace parser and extractor output at the validation boundary.
+
+    These DEBUG records can contain sensitive invoice data and are emitted only
+    when the application logger is explicitly configured for DEBUG output.
+    """
+    extraction_trace_logger.debug(
+        "Raw extracted text before validation [document_id=%s]:\n%s",
+        document_id,
+        raw_text,
+    )
+    extraction_trace_logger.debug(
+        "Structured JSON before validation [document_id=%s]: %s",
+        document_id,
+        json.dumps(invoice.model_dump(mode="json"), ensure_ascii=False, sort_keys=True),
+    )
 
 
 def process_document(document_id: str) -> None:
@@ -82,6 +106,7 @@ def process_document(document_id: str) -> None:
         )
 
         db.query(ValidationIssue).filter(ValidationIssue.document_id == document.id).delete()
+        _log_pre_validation_payload(document.id, parsed.text, invoice)
 
         def duplicate_check(number: str, supplier: str) -> bool:
             statement = select(InvoiceRegistry.id).where(

@@ -1,9 +1,12 @@
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
+import pymupdf
 from PIL import Image
 
 from app.services import document_processor as processor
+from app.services.extraction import extract_deterministic
 
 
 def test_csv_parsing_handles_structured_rows(tmp_path: Path):
@@ -46,3 +49,32 @@ def test_corrupt_pdf_has_safe_error(tmp_path: Path):
         assert "corrupted PDF" in str(exc)
     else:
         raise AssertionError("corrupted PDF should fail")
+
+
+def test_digital_pdf_header_supplier_and_split_total_regression(tmp_path: Path):
+    path = tmp_path / "bengal-office-supplies.pdf"
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text(
+        (72, 72),
+        """Bengal Office Supplies Ltd.
+42 Motijheel Commercial Area, Dhaka
+INVOICE
+Invoice No: BOS-2026-104
+Invoice Date: 2026-11-08
+TOTAL (BDT)
+20,685.00""",
+        fontsize=11,
+    )
+    document.save(path)
+    document.close()
+
+    parsed = processor.process_file(path)
+    extracted = extract_deterministic(parsed.text)
+
+    assert parsed.used_ocr is False
+    assert "Bengal Office Supplies Ltd." in parsed.text
+    assert "TOTAL (BDT)\n20,685.00" in parsed.text
+    assert extracted.supplier_name == "Bengal Office Supplies Ltd."
+    assert extracted.total == Decimal("20685.00")
+    assert extracted.currency == "BDT"

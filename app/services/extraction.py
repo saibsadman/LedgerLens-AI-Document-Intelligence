@@ -23,11 +23,29 @@ LABEL_PATTERNS = {
         r"(?:tax|vat|gst)(?:\s*\([^)]*\)|\s*\d+(?:\.\d+)?%)?\s*[:#]?\s*(?:[A-Z]{3}|[$€£৳])?\s*([\d,]+(?:\.\d{1,4})?)"
     ],
     "total": [
-        r"(?:grand\s+total|amount\s+due|invoice\s+total|(?<!sub)total)\s*[:#]?\s*(?:[A-Z]{3}|[$€£৳])?\s*([\d,]+(?:\.\d{1,4})?)"
+        r"(?m)^[ \t]*(?:grand[ \t]+total|amount[ \t]+due|invoice[ \t]+total|(?<!sub)total)"
+        r"[ \t]*(?:\([A-Z]{3}\)|[A-Z]{3}|[$€£৳])?[ \t]*[:#-]?[ \t]*"
+        r"(?:\r?\n[ \t]*)?([\d,]+(?:\.\d{1,4})?)[ \t]*$"
     ],
 }
 
 CURRENCY_MAP = {"$": "USD", "€": "EUR", "£": "GBP", "৳": "BDT", "₹": "INR"}
+
+COMPANY_SUFFIX = re.compile(
+    r"\b(?:ltd\.?|limited|llc|l\.l\.c\.?|inc\.?|incorporated|corp\.?|corporation|plc|company|co\.?)$",
+    flags=re.IGNORECASE,
+)
+
+SCALAR_EVIDENCE_FIELDS = (
+    "invoice_number",
+    "invoice_date",
+    "supplier_name",
+    "customer_name",
+    "subtotal",
+    "tax",
+    "total",
+    "currency",
+)
 
 
 def _first_match(text: str, patterns: list[str]) -> str | None:
@@ -63,6 +81,35 @@ def _currency(text: str) -> str | None:
     for symbol, code in CURRENCY_MAP.items():
         if symbol in text:
             return code
+    return None
+
+
+def _supplier_from_header(text: str) -> str | None:
+    """Find an evidence-backed supplier in the first invoice header lines.
+
+    Unlabeled text is accepted only when it ends in a recognized legal company
+    suffix. Ambiguous header text remains null instead of being guessed.
+    """
+    header_lines: list[str] = []
+    for raw_line in text.splitlines():
+        line = " ".join(raw_line.split()).strip(" |")
+        if not line or re.fullmatch(r"---\s*Page\s+\d+\s*---", line, re.IGNORECASE):
+            continue
+        if re.match(r"^(?:invoice|tax invoice)\b", line, re.IGNORECASE):
+            break
+        header_lines.append(line)
+        if len(header_lines) >= 12:
+            break
+
+    excluded_labels = re.compile(
+        r"^(?:bill\s*to|ship\s*to|customer|client|buyer|invoice|date|address)\b",
+        re.IGNORECASE,
+    )
+    for line in header_lines:
+        if excluded_labels.search(line) or ":" in line:
+            continue
+        if len(line) <= 120 and len(line.split()) >= 2 and COMPANY_SUFFIX.search(line):
+            return line
     return None
 
 
@@ -115,6 +162,10 @@ def _line_items(text: str) -> list[LineItem]:
 
 def extract_deterministic(text: str) -> InvoiceExtraction:
     values = {key: _first_match(text, patterns) for key, patterns in LABEL_PATTERNS.items()}
+    supplier_from_header = False
+    if values["supplier_name"] is None:
+        values["supplier_name"] = _supplier_from_header(text)
+        supplier_from_header = values["supplier_name"] is not None
     parsed = InvoiceExtraction(
         invoice_number=values["invoice_number"],
         invoice_date=_date(values["invoice_date"]),
@@ -128,8 +179,29 @@ def extract_deterministic(text: str) -> InvoiceExtraction:
     )
     populated = [name for name in LABEL_PATTERNS if getattr(parsed, name, None) is not None]
     parsed.field_confidence = {name: 0.72 for name in populated}
+    if supplier_from_header:
+        parsed.field_confidence["supplier_name"] = 0.62
     parsed.extraction_notes = ["Deterministic parser used; verify fields with low confidence."]
     return parsed
+
+
+def _merge_missing_text_evidence(
+    primary: InvoiceExtraction, evidence: InvoiceExtraction
+) -> InvoiceExtraction:
+    """Fill only null AI fields with values explicitly found in source text."""
+    merged = primary.model_copy(deep=True)
+    recovered: list[str] = []
+    for field in SCALAR_EVIDENCE_FIELDS:
+        if getattr(merged, field) is None and getattr(evidence, field) is not None:
+            setattr(merged, field, getattr(evidence, field))
+            recovered.append(field)
+            if field in evidence.field_confidence:
+                merged.field_confidence[field] = evidence.field_confidence[field]
+    if recovered:
+        merged.extraction_notes.append(
+            "Recovered explicit text evidence for: " + ", ".join(recovered) + "."
+        )
+    return merged
 
 
 def extract_invoice(text: str) -> InvoiceExtraction:
@@ -141,6 +213,8 @@ def extract_invoice(text: str) -> InvoiceExtraction:
     prompt = """Extract invoice facts from the supplied document text.
 Use null for every missing or uncertain scalar value. Never infer or invent a value.
 Amounts must be plain decimal numbers. Currency must be an ISO 4217 code when explicit.
+The supplier can be an unlabeled legal company name in the top invoice header.
+A total label and its amount can appear on adjacent extracted lines.
 Only include line items that are visibly present. Include short uncertainty notes and 0..1 confidence per populated field."""
     try:
         response = client.responses.parse(
@@ -155,7 +229,7 @@ Only include line items that are visibly present. Include short uncertainty note
             fallback = extract_deterministic(text)
             fallback.extraction_notes.append("LLM returned no parsed output; fallback parser used.")
             return fallback
-        return response.output_parsed
+        return _merge_missing_text_evidence(response.output_parsed, extract_deterministic(text))
     except Exception as exc:
         fallback = extract_deterministic(text)
         fallback.extraction_notes.append(

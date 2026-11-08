@@ -4,8 +4,8 @@ Verified on 2026-11-08.
 
 | Check | Result |
 |---|---|
-| Backend automated tests | 15 passed, 0 failed |
-| Backend statement coverage | 80% |
+| Backend automated tests | 19 passed, 0 failed |
+| Backend statement coverage | 82% |
 | Python lint/import checks | Passed |
 | Evaluation runner | Passed; output written to `evaluation/results.json` |
 | Frontend TypeScript check | Passed |

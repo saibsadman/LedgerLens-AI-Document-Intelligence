@@ -93,6 +93,8 @@ npm run build
 
 The benchmark writes actual measurements to `evaluation/results.json`. See [evaluation methodology](evaluation/README.md) and the [evaluation report](docs/EVALUATION_REPORT.md). A tiny synthetic benchmark is a smoke test, not a production accuracy claim.
 
+For extraction troubleshooting, start Uvicorn with `--log-level debug`. The pipeline logs the raw extracted text and structured JSON immediately before validation. These logs can contain sensitive invoice data; enable DEBUG only for a controlled diagnostic session and do not retain the output in production logs.
+
 The ready-to-play screen recording is at [docs/ledgerlens_walkthrough.webm](docs/ledgerlens_walkthrough.webm). Reproduction instructions are in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
 
 ## Scale and reliability
