@@ -30,6 +30,14 @@ def test_upload_process_search_and_correct_csv(client):
     assert corrected.status_code == 200
     assert corrected.json()["structured_data"]["invoice_number"] == "API-10-FIXED"
 
+    invalid = client.patch(
+        f"/api/v1/documents/{document_id}",
+        json={"updates": {"total": "not-a-number"}, "corrected_by": "tester"},
+    )
+    assert invalid.status_code == 422
+    unchanged = client.get(f"/api/v1/documents/{document_id}").json()
+    assert unchanged["structured_data"]["total"] != "not-a-number"
+
 
 def test_rejects_unsupported_upload(client):
     response = client.post(

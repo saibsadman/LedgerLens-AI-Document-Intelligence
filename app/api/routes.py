@@ -15,6 +15,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import ValidationError
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ from app.schemas import (
     CorrectionRequest,
     DocumentDetail,
     DocumentSummary,
+    InvoiceExtraction,
     SearchResponse,
     UploadResponse,
 )
@@ -212,6 +214,11 @@ def correct_document(document_id: str, request: CorrectionRequest, db: DbSession
     if invalid:
         raise HTTPException(422, f"Unsupported correction fields: {', '.join(sorted(invalid))}")
     data: dict[str, Any] = dict(document.structured_data or {})
+    candidate = {**data, **request.updates}
+    try:
+        validated = InvoiceExtraction.model_validate(candidate)
+    except ValidationError as exc:
+        raise HTTPException(422, detail=exc.errors(include_url=False)) from exc
     for field, new_value in request.updates.items():
         db.add(
             Correction(
@@ -222,8 +229,7 @@ def correct_document(document_id: str, request: CorrectionRequest, db: DbSession
                 corrected_by=request.corrected_by,
             )
         )
-        data[field] = new_value
-    document.structured_data = data
+    document.structured_data = validated.model_dump(mode="json")
     db.commit()
     revalidate_document(db, document)
     db.refresh(document)
