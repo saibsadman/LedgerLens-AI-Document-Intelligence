@@ -11,11 +11,25 @@ from app.schemas import InvoiceExtraction, LineItem
 
 LABEL_PATTERNS = {
     "invoice_number": [
-        r"(?m)^[ \t]*(?:invoice|inv)[ \t]*(?:no\.?|number|id|#)[ \t:#_-]*([A-Z0-9][A-Z0-9./_-]{2,})"
+        r"(?m)^[ \t]*(?:invoice|inv)[ \t]*(?:no\.?|number|id|#)[ \t:#_-]*([A-Z0-9][A-Z0-9./_-]{2,})",
+        r"\b(?:invoice|inv)[ \t]*(?:no\.?|number|id|#)[ \t:#_-]*([A-Z0-9][A-Z0-9./_-]{2,})",
     ],
-    "invoice_date": [r"(?:invoice\s*)?date\s*[:#-]?\s*([^\n|]{4,30})"],
-    "supplier_name": [r"(?:supplier|vendor|seller|from)\s*[:#-]\s*([^\n|]{2,100})"],
-    "customer_name": [r"(?:customer|client|bill\s*to|buyer)\s*[:#-]\s*([^\n|]{2,100})"],
+    "invoice_date": [
+        r"(?:invoice\s*)?date\s*[:#-]?\s*((?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2})|"
+        r"(?:\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}))\b",
+        r"(?:invoice\s*)?date\s*[:#-]?\s*([^\n|]{4,30})",
+    ],
+    "supplier_name": [
+        r"(?:supplier(?:\s+name)?|vendor(?:\s+name)?|seller|from)\s*[:#-]\s*"
+        r"(.{2,120}?)(?=\s+(?:customer(?:\s+name)?|client|bill\s*to|buyer|currency|"
+        r"invoice(?:\s+(?:number|date))?|line\s+items?|sub[ -]?total|tax|total)\s*[:#-]|"
+        r"\s+line\s+items?\b|$)"
+    ],
+    "customer_name": [
+        r"(?:customer(?:\s+name)?|client(?:\s+name)?|bill\s*to|buyer)\s*[:#-]\s*"
+        r"(.{2,120}?)(?=\s+(?:currency|invoice(?:\s+(?:number|date))?|line\s+items?|"
+        r"sub[ -]?total|tax|total)\s*[:#-]|\s+line\s+items?\b|$)"
+    ],
     "subtotal": [
         r"(?:sub[ -]?total|net\s+amount)\s*[:#]?\s*(?:[A-Z]{3}|[$€£৳])?\s*([\d,]+(?:\.\d{1,4})?)"
     ],
@@ -25,7 +39,10 @@ LABEL_PATTERNS = {
     "total": [
         r"(?m)^[ \t]*(?:grand[ \t]+total|amount[ \t]+due|invoice[ \t]+total|(?<!sub)total)"
         r"[ \t]*(?:\([A-Z]{3}\)|[A-Z]{3}|[$€£৳])?[ \t]*[:#-]?[ \t]*"
-        r"(?:\r?\n[ \t]*)?([\d,]+(?:\.\d{1,4})?)[ \t]*$"
+        r"(?:\r?\n[ \t]*)?([\d,]+(?:\.\d{1,4})?)[ \t]*$",
+        r"(?<!sub)\b(?:grand[ \t]+total|amount[ \t]+due|invoice[ \t]+total|total)\b"
+        r"[ \t]*(?:\([A-Z]{3}\)|[A-Z]{3}|[$€£৳])?[ \t]*[:#-]?[ \t]*"
+        r"([\d,]+(?:\.\d{1,4})?)",
     ],
 }
 

@@ -70,6 +70,21 @@ def test_ai_null_fields_recover_only_explicit_text_evidence():
     assert merged.customer_name is None
 
 
+def test_single_line_pdf_text_with_name_labels_and_inline_total():
+    text = """--- Page 1 --- For testing only. Not a real financial document. INVOICE SYNTHETIC TEST DOCUMENT  |  VALID Invoice Number: INV-2026-1042 Invoice Date: 2026-11-04 Supplier Name: Bengal Office Supplies Ltd. Customer Name: Eastern Retail Solutions Ltd. Currency: BDT Line Items Description Qty Unit Price Amount Business Network Switch 2 4,800.00 9,600.00 Enterprise SSD 1TB 1 6,500.00 6,500.00 Installation & Configuration 3 1,200.00 3,600.00 Subtotal: 19,700.00 Tax: 985.00 Total: 20,685.00 Tax Rate: 5%"""
+
+    result = extract_deterministic(text)
+
+    assert result.invoice_number == "INV-2026-1042"
+    assert result.invoice_date.isoformat() == "2026-11-04"
+    assert result.supplier_name == "Bengal Office Supplies Ltd."
+    assert result.customer_name == "Eastern Retail Solutions Ltd."
+    assert result.subtotal == Decimal("19700.00")
+    assert result.tax == Decimal("985.00")
+    assert result.total == Decimal("20685.00")
+    assert result.currency == "BDT"
+
+
 def test_invoice_summary_table_is_not_misclassified_as_line_item():
     text = """Invoice No: REVIEW-2026-077
 Invoice Date: 2026-11-08
