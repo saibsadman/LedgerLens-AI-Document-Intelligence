@@ -1,0 +1,26 @@
+{
+  "dataset": "3 generated labeled synthetic invoices (digital PDF, XLSX, CSV)",
+  "documents": 3,
+  "field_accuracy": 1.0,
+  "document_success_rate": 1.0,
+  "failure_rate": 0.0,
+  "mean_processing_seconds": 0.015484266667044722,
+  "p95_processing_seconds": 0.023308799998631002,
+  "details": [
+    {
+      "file": "invoice.pdf",
+      "success": true,
+      "field_accuracy": 1.0
+    },
+    {
+      "file": "invoice.xlsx",
+      "success": true,
+      "field_accuracy": 1.0
+    },
+    {
+      "file": "invoice.csv",
+      "success": true,
+      "field_accuracy": 1.0
+    }
+  ]
+}
